@@ -1,0 +1,17 @@
+{
+  "name": "taskflow-workspace",
+  "version": "1.0.0",
+  "description": "Full-Stack MERN Task Management Application with JWT Auth and MongoDB",
+  "scripts": {
+    "install:all": "npm --prefix Backend install && npm --prefix Frontend install",
+    "dev:backend": "npm --prefix Backend run dev",
+    "dev:frontend": "npm --prefix Frontend run dev",
+    "seed": "npm --prefix Backend run seed",
+    "test:backend": "npm --prefix Backend test",
+    "test:frontend": "npm --prefix Frontend test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "build:frontend": "npm --prefix Frontend run build"
+  },
+  "author": "MERN Stack Developer",
+  "license": "ISC"
+}
