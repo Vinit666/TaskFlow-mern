@@ -20,7 +20,7 @@ A production-grade, full-stack Task Management Application built with layered en
 6. [API Endpoints Reference](#-api-endpoints-reference)
 7. [Advanced Features (Part 4)](#-advanced-features-part-4)
 8. [Testing and Test Coverage (Part 5)](#-testing-and-test-coverage)
-9. [Pre-configured Test Credentials](#-pre-configured-test-credentials)
+9. [Database Seeding & Setup](#-database-seeding--setup)
 10. [Postman Collection Guide](#-postman-collection-guide)
 
 ---
@@ -284,26 +284,16 @@ npm test
 
 ---
 
-## 🔑 Pre-configured Test Credentials
+## 🔑 Database Seeding & Setup
 
-Run the database seeder to populate sample tasks and test users:
+Run the database seeder to populate sample tasks and test data:
 
 ```bash
 cd Backend
 npm run seed
 ```
 
-### Ready-to-Use Accounts:
-1. **Primary Account**:
-   - **Email**: `demo@taskflow.com`
-   - **Password**: `Password123!`
-   - *(Comes pre-loaded with 6 sample tasks across Pending, In-Progress, and Completed states with priorities and due dates)*.
-2. **Secondary Account (For Cross-User Authorization Verification)**:
-   - **Email**: `sarah@taskflow.com`
-   - **Password**: `Password123!`
-   - *(Contains Sarah's private tasks. Logging in as Sarah proves that Sarah cannot see Alex's tasks and vice-versa)*.
-
-> **Convenience Feature**: On the Frontend Login screen, click the **"Quick Demo Login"** button to instantly populate the demo login with one click!
+You can also register new accounts directly from the application registration screen (`/register`).
 
 ---
 
