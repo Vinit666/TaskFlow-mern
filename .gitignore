@@ -36,3 +36,4 @@ Thumbs.db
 # Documents & Assessments
 *.pdf
 Docs/*.pdf
+Docs/MANUAL_IMPLEMENTATION_GUIDE.md

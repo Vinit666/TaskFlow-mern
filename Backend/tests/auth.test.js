@@ -179,4 +179,253 @@ describe('Authentication API Endpoints', () => {
       expect(res.body.success).toBe(false);
     });
   });
+
+  describe('PUT /api/auth/profile (Protected Route)', () => {
+    let token;
+    let userId;
+
+    beforeEach(async () => {
+      const reg = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Original Name',
+          email: 'profiletest@example.com',
+          password: 'Password123!'
+        });
+      token = reg.body.data.token;
+      userId = reg.body.data.user.id;
+    });
+
+    it('should update user name successfully', async () => {
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .field('name', 'Updated Name');
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.name).toBe('Updated Name');
+    });
+
+    it('should upload avatar photo under 5MB and update user avatar path', async () => {
+      const fakeImageBuffer = Buffer.from('fake image content');
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .field('name', 'Name With Avatar')
+        .attach('avatar', fakeImageBuffer, 'test-photo.png');
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.avatar).toMatch(/^\/uploads\/avatars\/avatar-/);
+      expect(res.body.data.user.name).toBe('Name With Avatar');
+    });
+
+    it('should reject avatar larger than 5MB', async () => {
+      const largeBuffer = Buffer.alloc(5.5 * 1024 * 1024); // 5.5MB
+      const res = await request(app)
+        .put('/api/auth/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .attach('avatar', largeBuffer, 'huge.png');
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toMatch(/5 MB/i);
+    });
+  });
+
+  describe('Forgot Password with OTP Flow', () => {
+    beforeEach(async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Reset Test User',
+          email: 'forgotuser@example.com',
+          password: 'OldPassword123!'
+        });
+    });
+
+    it('should issue an OTP and send it for registered email', async () => {
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'forgotuser@example.com' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const user = await User.findOne({ email: 'forgotuser@example.com' }).select('+resetPasswordOtp +resetPasswordExpires');
+      expect(user.resetPasswordOtp).toBeDefined();
+      expect(user.resetPasswordOtp.length).toBe(6);
+      expect(user.resetPasswordExpires.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it('should verify correct OTP successfully and reject wrong OTP', async () => {
+      await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'forgotuser@example.com' });
+
+      const user = await User.findOne({ email: 'forgotuser@example.com' }).select('+resetPasswordOtp');
+      const otp = user.resetPasswordOtp;
+
+      // Bad OTP
+      const badRes = await request(app)
+        .post('/api/auth/verify-otp')
+        .send({ email: 'forgotuser@example.com', otp: '000000' });
+      expect(badRes.statusCode).toBe(400);
+
+      // Good OTP
+      const goodRes = await request(app)
+        .post('/api/auth/verify-otp')
+        .send({ email: 'forgotuser@example.com', otp });
+      expect(goodRes.statusCode).toBe(200);
+      expect(goodRes.body.success).toBe(true);
+    });
+
+    it('should reset password with valid OTP and allow login with new password', async () => {
+      await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'forgotuser@example.com' });
+
+      const user = await User.findOne({ email: 'forgotuser@example.com' }).select('+resetPasswordOtp');
+      const otp = user.resetPasswordOtp;
+
+      // Reset password
+      const resetRes = await request(app)
+        .post('/api/auth/reset-password')
+        .send({
+          email: 'forgotuser@example.com',
+          otp,
+          newPassword: 'BrandNewPassword123!'
+        });
+
+      expect(resetRes.statusCode).toBe(200);
+      expect(resetRes.body.success).toBe(true);
+
+      // Verify old password fails
+      const oldLogin = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'forgotuser@example.com',
+          password: 'OldPassword123!'
+        });
+      expect(oldLogin.statusCode).toBe(401);
+
+      // Verify new password succeeds
+      const newLogin = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'forgotuser@example.com',
+          password: 'BrandNewPassword123!'
+        });
+      expect(newLogin.statusCode).toBe(200);
+      expect(newLogin.body.data.token).toBeDefined();
+    });
+  });
+
+  describe('Session and Login Time Tracking', () => {
+    it('should increment loginCount and record session on repeated logins', async () => {
+      // 1. Register
+      const regRes = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Session User',
+          email: 'sessionuser@example.com',
+          password: 'Password123!'
+        });
+
+      expect(regRes.statusCode).toBe(201);
+      expect(regRes.body.data.user.loginCount).toBe(1);
+      expect(regRes.body.data.sessionId).toBeDefined();
+
+      // 2. Login again
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'sessionuser@example.com',
+          password: 'Password123!'
+        });
+
+      expect(loginRes.statusCode).toBe(200);
+      expect(loginRes.body.data.user.loginCount).toBe(2);
+      expect(loginRes.body.data.user.sessions.length).toBeGreaterThanOrEqual(2);
+      expect(loginRes.body.data.user.lastLoginAt).toBeDefined();
+
+      // 3. Sync session heartbeat
+      const token = loginRes.body.data.token;
+      const sessionId = loginRes.body.data.sessionId;
+
+      const heartbeatRes = await request(app)
+        .post('/api/auth/session-heartbeat')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          sessionId,
+          durationSeconds: 120,
+          isClosing: false
+        });
+
+      expect(heartbeatRes.statusCode).toBe(200);
+      expect(heartbeatRes.body.data.totalSessionTime).toBeGreaterThanOrEqual(120);
+
+      // 4. Logout should finalize the active session duration
+      const logoutRes = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ sessionId });
+
+      expect(logoutRes.statusCode).toBe(200);
+
+      // Verify user sessions in DB
+      const meRes = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(meRes.statusCode).toBe(200);
+      const userDoc = meRes.body.data.user;
+      const closedSession = userDoc.sessions.find((s) => s.sessionId === sessionId);
+      expect(closedSession.isActive).toBe(false);
+      expect(closedSession.logoutAt).toBeDefined();
+      expect(closedSession.durationSeconds).toBeGreaterThanOrEqual(120);
+    });
+
+    it('should support session-leave candidate and resume without disrupting session', async () => {
+      const reg = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Tab Close User',
+          email: 'tabcloseuser@example.com',
+          password: 'Password123!'
+        });
+
+      const token = reg.body.data.token;
+      const sessionId = reg.body.data.sessionId;
+
+      // 1. Send session-leave (like when user triggers beforeunload / F5)
+      const leaveRes = await request(app)
+        .post('/api/auth/session-leave')
+        .send({
+          sessionId,
+          durationSeconds: 45,
+          leaveTime: Date.now()
+        });
+
+      expect(leaveRes.statusCode).toBe(200);
+
+      // 2. Immediately send session-resume (simulating quick page refresh)
+      const resumeRes = await request(app)
+        .post('/api/auth/session-resume')
+        .send({ sessionId });
+
+      expect(resumeRes.statusCode).toBe(200);
+
+      // 3. User checks profile; session must still be active because reload resumed it
+      const meRes = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(meRes.statusCode).toBe(200);
+      const active = meRes.body.data.user.sessions.find((s) => s.sessionId === sessionId);
+      expect(active.isActive).toBe(true);
+      expect(active.logoutAt).toBeNull();
+    });
+  });
 });

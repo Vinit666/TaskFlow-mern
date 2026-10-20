@@ -37,7 +37,7 @@ export const Input = ({
               alignItems: 'center'
             }}
           >
-            <Icon size={18} />
+            {React.isValidElement(Icon) ? Icon : <Icon size={18} />}
           </div>
         )}
         <input

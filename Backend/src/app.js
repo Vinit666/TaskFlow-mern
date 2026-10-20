@@ -3,13 +3,18 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const routes = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorMiddleware');
 
 const app = express();
 
-// Secure HTTP response headers
-app.use(helmet());
+// Secure HTTP response headers (permitting cross-origin media like profile photos)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
 
 // Cross-Origin Resource Sharing configuration
 const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -25,6 +30,9 @@ app.use(
 // Request body parsers
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
+
+// Static uploads directory for avatars
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // HTTP Request Logger (silenced in test environment)
 if (process.env.NODE_ENV !== 'test') {
@@ -45,6 +53,8 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 
 // Root Welcome Endpoint
 app.get('/', (req, res) => {

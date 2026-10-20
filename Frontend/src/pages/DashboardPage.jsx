@@ -90,6 +90,11 @@ export const DashboardPage = ({ isCreateModalOpen, onCloseCreateModal }) => {
     setSort('createdAt', 'desc');
   };
 
+  const handleCloseTaskModal = React.useCallback(() => {
+    setSelectedTaskForEdit(null);
+    if (onCloseCreateModal) onCloseCreateModal();
+  }, [onCloseCreateModal]);
+
   return (
     <div style={{ padding: '2rem 0 3rem' }}>
       <div className="container">
@@ -271,10 +276,7 @@ export const DashboardPage = ({ isCreateModalOpen, onCloseCreateModal }) => {
       {/* Create / Edit Modal */}
       <TaskFormModal
         isOpen={Boolean(selectedTaskForEdit || isCreateModalOpen)}
-        onClose={() => {
-          setSelectedTaskForEdit(null);
-          if (onCloseCreateModal) onCloseCreateModal();
-        }}
+        onClose={handleCloseTaskModal}
         onSubmit={selectedTaskForEdit?._id ? handleEditSubmit : handleCreateSubmit}
         initialData={selectedTaskForEdit?._id ? selectedTaskForEdit : null}
         isLoading={isSubmitting}

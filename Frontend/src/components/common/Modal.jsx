@@ -10,38 +10,54 @@ export const Modal = ({
 }) => {
   const modalRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const isOverlayMouseDownRef = useRef(false);
+
+  // Keep onClose fresh in ref
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      document.body.style.overflow = 'unset';
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
+      return;
+    }
 
-    // Save active element to restore focus on close
+    // Save active element prior to opening modal
     previousFocusRef.current = document.activeElement;
     document.body.style.overflow = 'hidden';
 
-    // Move focus inside the modal
+    // Move focus inside the modal - targeting the first input in modal-body or autoFocus element
     const focusTimer = setTimeout(() => {
       if (modalRef.current) {
-        const focusables = modalRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusables.length > 0) {
-          focusables[0].focus();
-        } else {
-          modalRef.current.focus();
+        const autoFocusEl = modalRef.current.querySelector('[autofocus], [autoFocus]');
+        const bodyInput = modalRef.current
+          .querySelector('.modal-body')
+          ?.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+        const targetToFocus = autoFocusEl || bodyInput || modalRef.current;
+        if (targetToFocus && typeof targetToFocus.focus === 'function') {
+          targetToFocus.focus();
         }
       }
     }, 50);
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        e.preventDefault();
+        e.stopPropagation();
+        onCloseRef.current?.();
         return;
       }
 
       // Trap focus inside modal
       if (e.key === 'Tab' && modalRef.current) {
         const focusables = modalRef.current.querySelectorAll(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
         if (focusables.length === 0) return;
 
@@ -66,21 +82,23 @@ export const Modal = ({
 
     return () => {
       clearTimeout(focusTimer);
-      document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
-      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
-        previousFocusRef.current.focus();
-      }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <div
       className="modal-overlay"
+      onMouseDown={(e) => {
+        isOverlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && isOverlayMouseDownRef.current) {
+          onCloseRef.current?.();
+        }
+        isOverlayMouseDownRef.current = false;
       }}
       role="dialog"
       aria-modal="true"
@@ -91,13 +109,15 @@ export const Modal = ({
         tabIndex={-1}
         className="modal-content"
         style={{ maxWidth, outline: 'none' }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
           <h2 id="modal-dialog-title" style={{ fontSize: '1.125rem', fontWeight: 600 }}>
             {title}
           </h2>
           <button
-            onClick={onClose}
+            type="button"
+            onClick={() => onCloseRef.current?.()}
             className="btn btn-ghost btn-icon btn-sm"
             aria-label="Close dialog"
           >

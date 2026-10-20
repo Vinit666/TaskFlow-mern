@@ -4,7 +4,7 @@ import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { Mail, Lock, CheckSquare } from 'lucide-react';
 
-export const LoginPage = ({ onNavigateRegister }) => {
+export const LoginPage = ({ onNavigateRegister, onNavigateForgotPassword }) => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
@@ -110,7 +110,7 @@ export const LoginPage = ({ onNavigateRegister }) => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit} noValidate autoComplete="off">
           <Input
             label="Email Address"
             id="login-email"
@@ -122,7 +122,7 @@ export const LoginPage = ({ onNavigateRegister }) => {
             placeholder="you@example.com"
             error={errors.email}
             required
-            autoComplete="email"
+            autoComplete="off"
           />
 
           <Input
@@ -136,14 +136,33 @@ export const LoginPage = ({ onNavigateRegister }) => {
             placeholder="••••••••"
             error={errors.password}
             required
-            autoComplete="current-password"
+            autoComplete="new-password"
           />
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-0.5rem', marginBottom: '1.25rem' }}>
+            <button
+              type="button"
+              onClick={onNavigateForgotPassword}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                padding: 0
+              }}
+              id="link-forgot-password"
+            >
+              Forgot password?
+            </button>
+          </div>
 
           <Button
             type="submit"
             variant="primary"
             isLoading={isLoading}
-            style={{ width: '100%', marginTop: '0.5rem', height: '44px' }}
+            style={{ width: '100%', marginTop: '0.25rem', height: '44px' }}
             id="btn-login-submit"
           >
             Sign In

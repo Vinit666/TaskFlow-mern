@@ -40,13 +40,50 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Please provide a password'],
       minlength: [6, 'Password must be at least 6 characters long'],
       select: false // Excluded from query results by default for safety
-    }
+    },
+    avatar: {
+      type: String,
+      default: ''
+    },
+    resetPasswordOtp: {
+      type: String,
+      select: false
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false
+    },
+    loginCount: {
+      type: Number,
+      default: 0
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null
+    },
+    totalSessionTime: {
+      type: Number,
+      default: 0 // In seconds
+    },
+    sessions: [
+      {
+        sessionId: { type: String, required: true },
+        loginAt: { type: Date, default: Date.now },
+        logoutAt: { type: Date, default: null },
+        durationSeconds: { type: Number, default: 0 },
+        ipAddress: { type: String, default: '' },
+        userAgent: { type: String, default: '' },
+        isActive: { type: Boolean, default: true }
+      }
+    ]
   },
   {
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
         delete ret.password;
+        delete ret.resetPasswordOtp;
+        delete ret.resetPasswordExpires;
         delete ret.__v;
         return ret;
       }

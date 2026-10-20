@@ -209,7 +209,12 @@ Base URL: `http://localhost:5000/api`
 | `GET` | `/health` | System health and uptime | No |
 | `POST` | `/auth/register` | Register new user & send Brevo welcome email | No |
 | `POST` | `/auth/login` | Authenticate with email/password and issue JWT | No |
+| `POST` | `/auth/forgot-password` | Generate 6-digit OTP and send via Brevo email | No |
+| `POST` | `/auth/verify-otp` | Verify 6-digit password reset OTP | No |
+| `POST` | `/auth/reset-password` | Reset password using verified OTP | No |
 | `GET` | `/auth/me` | Fetch authenticated user profile | **Yes (JWT)** |
+| `PUT` | `/auth/profile` | Update user name & upload profile photo (< 5MB) | **Yes (JWT)** |
+| `POST` | `/auth/session-heartbeat` | Sync active session duration & heartbeat | **Yes (JWT)** |
 | `POST` | `/auth/logout` | Acknowledge logout and invalidate session | **Yes (JWT)** |
 | `GET` | `/tasks` | List user's tasks (search, filter, sort, paginate) | **Yes (JWT)** |
 | `GET` | `/tasks/stats` | Get dashboard counters (Total, Pending, etc.) | **Yes (JWT)** |
@@ -333,6 +338,14 @@ npm run dev
 ```
 
 Open your browser to: **`http://localhost:5173`**
+
+---
+
+## 📖 Complete Manual Implementation Guide
+
+A comprehensive, production-ready manual covering how to re-create the **Profile Photo Upload (<5MB)**, **Forgot Password with OTP (Brevo)**, and **Login Session & Duration Tracking** features step-by-step from scratch is available in:
+
+👉 [`Docs/MANUAL_IMPLEMENTATION_GUIDE.md`](file:///c:/Users/Vinit/Desktop/IpTecheiProject/Docs/MANUAL_IMPLEMENTATION_GUIDE.md)
 
 ---
 

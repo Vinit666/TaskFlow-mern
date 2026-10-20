@@ -23,28 +23,47 @@ export const TaskFormModal = ({
 
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        title: initialData.title || '',
-        description: initialData.description || '',
-        status: initialData.status || 'pending',
-        priority: initialData.priority || 'medium',
-        dueDate: initialData.dueDate
-          ? new Date(initialData.dueDate).toISOString().split('T')[0]
-          : ''
-      });
-    } else {
-      setFormData({
-        title: '',
-        description: '',
-        status: 'pending',
-        priority: 'medium',
-        dueDate: ''
-      });
+  const parseSafeDate = (d) => {
+    if (!d) return '';
+    try {
+      const parsed = new Date(d);
+      return isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
+    } catch (e) {
+      return '';
     }
-    setErrors({});
-  }, [initialData, isOpen]);
+  };
+
+  const prevIsOpenRef = React.useRef(false);
+  const prevTaskIdRef = React.useRef(null);
+
+  useEffect(() => {
+    const isOpening = isOpen && !prevIsOpenRef.current;
+    const taskChanged = (initialData?._id || null) !== prevTaskIdRef.current;
+
+    if (isOpen && (isOpening || taskChanged)) {
+      if (initialData && initialData._id) {
+        setFormData({
+          title: initialData.title || '',
+          description: initialData.description || '',
+          status: initialData.status || 'pending',
+          priority: initialData.priority || 'medium',
+          dueDate: parseSafeDate(initialData.dueDate)
+        });
+      } else {
+        setFormData({
+          title: '',
+          description: '',
+          status: 'pending',
+          priority: 'medium',
+          dueDate: ''
+        });
+      }
+      setErrors({});
+    }
+
+    prevIsOpenRef.current = isOpen;
+    prevTaskIdRef.current = initialData?._id || null;
+  }, [isOpen, initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,7 +89,14 @@ export const TaskFormModal = ({
     if (!validate()) return;
 
     try {
-      await onSubmit(formData);
+      const payload = {
+        title: formData.title.trim(),
+        description: (formData.description || '').trim(),
+        status: formData.status || 'pending',
+        priority: formData.priority || 'medium',
+        dueDate: formData.dueDate ? formData.dueDate : null
+      };
+      await onSubmit(payload);
       onClose();
     } catch (err) {
       // Error message handled in parent / toast
